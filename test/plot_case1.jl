@@ -10,7 +10,7 @@ i_var=i_var
 
 guipath = savepath
 
-screen = Gtk4Makie.GTKScreen(title="LCMsim v2")    
+screen = Gtk4Makie.GTKScreen(title="LCMsim v3")    
 filename=joinpath(guipath,"start.jld2")
 @load filename xyz N cgammavec minval maxval
 p1=display(screen, poly(connect(xyz, GeometryBasics.Point{3}), connect(1:3*N, TriangleFace); color=cgammavec[:], strokewidth=1,colorrange=(minval,maxval)))

@@ -1,11 +1,11 @@
-include("../src/LCMsim_v2.jl")
+include("../src/LCMsim_v3.jl")
 
 mypath=pwd()
 savepath = joinpath(mypath,"test")
 
-i_case=23  #31
+i_case=1  #23  #31
 if i_case==21  
-    #VARI case 1: Validation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
+    #VARI case 1: Vlidation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
     #             Simulation of the reinforcement compaction and resin flow during the complete resin infusion process    
     meshfile = joinpath(mypath,"test","mesh_21.dat")
     partfile = joinpath(mypath,"test","part_description_21.csv")
@@ -89,11 +89,11 @@ i_var=4     #0..filling,1..thickness,2..porosity,3..filling DM,4..filling combin
 
 t_step = t_max/16
 if i_model == 1
-    modeltype = LCMsim_v2.model_1
+    modeltype = LCMsim_v3.model_1
 elseif i_model == 2         
-    modeltype = LCMsim_v2.model_2
+    modeltype = LCMsim_v3.model_2
 else
-    modeltype = LCMsim_v2.model_3
+    modeltype = LCMsim_v3.model_3
 end  
 
 filename_parts=splitpath(meshfile)
@@ -103,7 +103,7 @@ writefilename=joinpath(meshfilename_parts)
 
 i_advanced=2
 
-LCMsim_v2.create_and_solve(savepath,meshfile,partfile,simfile,modeltype,i_advanced,t_max,t_step,LCMsim_v2.verbose,true,true)
+LCMsim_v3.create_and_solve(savepath,meshfile,partfile,simfile,modeltype,i_advanced,t_max,t_step,LCMsim_v3.verbose,true,true)
 
 include("plot_case1.jl");
 
