@@ -2,12 +2,16 @@
 
 ## Test cases
 There are several test cases available. Go to folder test, open Julia scipt run_case1.jl, select case with variable i_case and run the Julia script:
+
+Test cases for i_model=2 (RTM):
 - Case 0: Radial test case with multiple patches
 - Case 1: Radial test case 1 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
 - Case 2: Radial test case 2 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
 - Case 5: Annulus filler test case from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
 - Case 7: AMPCS case 1 from https://www.tandfonline.com/doi/full/10.1080/20550340.2023.2282310, Validation was performed with exp_val=4, now exp_val=25 is default, resulting is small discrepacies
 - Case 8: AMPCS case 2 from https://www.tandfonline.com/doi/full/10.1080/20550340.2023.2282310, Validation was performed with exp_val=4, now exp_val=25 is default, resulting is small discrepacies
+
+Test cases for i_model=3:
 - Case 21: VARI case 1: Validation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, Simulation of the reinforcement compaction and resin flow during the complete resin infusion process
 - Case 22: VARI case 2: Validation case with DM from from J. Sirtautas, A.K. Pickett, A. George, Materials characterisation and analysis for flow simulation of liquid resin infusion   
 - Case 23: VARI case 3: Empirical observation from H. M. Andersson, T. S. Lundström, B. R. Gebart, Numerical model for vacuum infusion manufacturing of polymer composites
