@@ -1,0 +1,4 @@
+name,type,part_id,thickness,porosity,porosity_noise,permeability,permeability_noise,alpha,refdir1,refdir2,refdir3,porosity_1,p_1,porosity_2,p_2,n_CK,permeability_Z,thickness_DM,porosity_DM,permeability_DM,permeability_DM_Z
+base,base,1,3.14e-3,0.604,0.0,163e-12,0.0,0.3086,1,0,0,0.604,0.5e5,0.604,1e5,0.0,1.0e-12,0.0000,0.9,1.0e-9,1.0e-9
+central_inlet,inlet,2,3.14e-3,0.604,0.0,163e-12,0.0,0.3086,1,0,0,0.7,0.5e5,0.7,1e5,0.0,1.0e-12,0.0000,0.9,1.0e-9,1.0e-9
+base,base,3,3.14e-3,0.468,0.0,28.6e-12,0.0,0.122,1,0,0,0.468,0.5e5,0.468,1e5,0.0,1.0e-12,0.0000,0.9,1.0e-9,1.0e-9
