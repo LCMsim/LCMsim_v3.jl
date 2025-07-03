@@ -1,5 +1,9 @@
 # LCMsim_v3.jl
 
+## Test cases
+There are several test cases available: Go to folder test, open run_case1.jl run this script after case selection.
+- 
+
 ## Allowed mesh formats
 LCMsim_v3.jl does not include mesh generation. A 3-node triangular shell mesh with the pre-defined regions must be generated with a meshing tool before starting the filling simulation. The authors used Altair HyperWorks but also free software tools such as SALOME-MECA, GMSH or NETGEN can be used.
 
