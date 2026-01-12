@@ -1129,12 +1129,13 @@ function solve(
                     Kz_FP=cell.permeability_Z
                 end
                 Kz=1/((0.5*t_FP)/(0.5*t_FP+0.5*t_DM)*1/Kz_FP + (0.5*t_DM)/(0.5*t_FP+0.5*t_DM)*1/Kz_DM)
+                #Kz=1/((0.5*gamma_old[cell.id]*t_FP)/(0.5*gamma_old[cell.id]*t_FP+0.5*t_DM)*1/Kz_FP + (0.5*t_DM)/(0.5*gamma_old[cell.id]*t_FP+0.5*t_DM)*1/Kz_DM)
                 
                 dp=p_old[cell.id]-p_DM_old[cell.id]               
-                dz=0.25*t_FP   #working solution
-                #dz=(0.2+0.6*gamma_old[cell.id])*t_FP  #alternative with variable distance dz
+                dz=0.50*t_FP+0.5*t_DM   #0.5*gamma_old[cell.id]*t_FP+0.5*t_DM   #0.25*t_FP   #working solution
                 dpdz=dp/dz
-                w_new[cell.id]=(1-alpha_w)*w_new[cell.id]  +(alpha_w)*(-Kz/scaled_properties.viscosity*dpdz)   #with under-relaxation for smoothing
+                #w_new[cell.id]=(1-alpha_w)*w_new[cell.id]  +(alpha_w)*(-Kz/scaled_properties.viscosity*dpdz)   #with under-relaxation for smoothing
+                w_new[cell.id]=(-Kz/scaled_properties.viscosity*dpdz)    #UNDO THIS
                 if w_new[cell.id]>=0.
                     F_rho_num=F_rho_num-(rho_DM_old[cell.id]*w_new[cell.id]*cell.area)  #negative sign because in the update function there is also a negative sign infront of the flux
                     F_rho_DM_num=F_rho_DM_num+(rho_DM_old[cell.id]*w_new[cell.id]*cell.area)

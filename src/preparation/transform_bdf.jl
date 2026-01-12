@@ -95,13 +95,18 @@ function parse_HyperMeshNastran(inputfile::String)
                 end
                 i_set=i_set+1
                 ids = []
-            
-                for l in temp_set
-                    ids_string = match(Regex("([0-9]+,)+[0-9]+"), l).match
-                    append!(ids, split(ids_string, ","))
+
+                #If there is only one cell in the set, i.e. two numbers and one "=" in the string 
+                m1 = match(r"^\D*(\d+)\D*=\D*(\d+)\D*$", line)
+                if m1 !== nothing
+                    ids = parse(Int, m1.captures[2])
+                else
+                    for l in temp_set
+                        ids_string = match(Regex("([0-9]+,)+[0-9]+"), l).match
+                        append!(ids, split(ids_string, ","))
+                    end
+                    ids = [parse(Int, id) for id in ids]
                 end
-            
-                ids = [parse(Int, id) for id in ids]
             
                 push!(sets, (part_id, ids))
                 temp_set = []
