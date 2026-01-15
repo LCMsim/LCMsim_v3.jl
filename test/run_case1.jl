@@ -3,7 +3,7 @@ include("../src/LCMsim_v3.jl")
 mypath=pwd()
 savepath = joinpath(mypath,"test")
 
-i_case=5 #23  #31
+i_case=22 #23  #31
 if i_case==21  
     #VARI case 1: Vlidation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
     #             Simulation of the reinforcement compaction and resin flow during the complete resin infusion process    
@@ -20,7 +20,7 @@ elseif i_case==22
     partfile = joinpath(mypath,"test","part_description_22001.csv")
     simfile = joinpath(mypath,"test","simulation_params_22.csv")
     i_model=3
-    t_max = 135.  #23.
+    t_max =230.  # 135.  #23.
 elseif i_case==23
     #VARI case 3: Empirical observation from H. M. Andersson, T. S. Lundström, B. R. Gebart, 
     #             Numerical model for vacuum infusion manufacturing of polymer composites

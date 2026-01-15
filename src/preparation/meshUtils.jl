@@ -820,7 +820,7 @@ function parse_partfile(partfilename::String, allowed_part_ids::Vector{Int})
     if allowed_in_pids && !pids_in_allowed
         @info "Some parts from the parts description file are not used."
     elseif !allowed_in_pids
-        @info "Missing part properties in part description file. Properties from part 1 used instead."
+        @info "Missing part properties in part description file. Properties from part 1 used instead or interactively specified inlets used."
     end
     #@info "pids_part = $pids_part"
     #@info "allowed_part_ids = $allowed_part_ids"

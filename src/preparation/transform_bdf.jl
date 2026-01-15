@@ -119,7 +119,7 @@ function parse_HyperMeshNastran(inputfile::String)
     #     change part_ID to an inlet for all cells which lie inside a sphere with radius
     filename_parts=splitpath(inputfile)
     _psetfile=joinpath( joinpath(filename_parts[1:end-1]) ,"_pset.csv")
-    @info "_psetfile = $_psetfile"
+    #@info "_psetfile = $_psetfile"
     if isfile(_psetfile)
         #read _psetfile: first line radius, following line inlet points
         lines = readlines(_psetfile);n_lines=length(lines);r_p=parse(Float64,lines[1])
