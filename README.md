@@ -18,6 +18,8 @@ Test cases for i_model=3:
 - Case 31: FPCM16 VARI test case for verification with OpenFOAM from https://www.researchgate.net/publication/388184799_Improved_Finite_Volume_multiphase_flow_simulation_model_for_strongly_inhomogeneous_porous_media
 - Case 33: Radial flow similar to 31 but coarse mesh for quick tests
 
+In order to run a test case: Download and extract the repository. Open a Julia REPL. Change to folder `LCMsim_v3.jl` with something similar to `cd("D://work//github/LCMsim_v3.jl")`. Select test case in line 6 of `run_case1.jl`, for example with `i_case=22`. Then start the simulation by inserting `include("test//run_case1.jl")` in the Julia REPL.
+
 ## Allowed mesh formats
 LCMsim_v3.jl does not include mesh generation. A 3-node triangular shell mesh with the pre-defined regions must be generated with a meshing tool before starting the filling simulation. The authors used Altair HyperWorks but also free software tools such as SALOME-MECA, GMSH or NETGEN can be used.
 
