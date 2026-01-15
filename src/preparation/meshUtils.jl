@@ -239,7 +239,11 @@ function create_LcmMesh(meshfile::String, partfile::String)
 
         # get part information for this cell
         part_id = part_ids[cid]
-        part_parameters = parts[part_id] 
+        if part_id==999999
+            part_parameters = parts[length(parts)] 
+        else
+            part_parameters = parts[part_id] 
+        end
 
         permeability = __calculate_permeability(part_parameters[KEY_PERMEABILITY], part_parameters[KEY_PERMEABILITY_NOISE])
         porosity = __calculate_porosity(part_parameters[KEY_POROSITY], part_parameters[KEY_POROSITY_NOISE])
@@ -792,35 +796,76 @@ function parse_partfile(partfilename::String, allowed_part_ids::Vector{Int})
     pids_part = Int8.(partfile["part_id"])
 
     # assert that every part id in the partfile is also in the meshfile
-    @assert all(map(x -> x in allowed_part_ids, pids_part)) "Invalid part id in part file!"
+    # @assert all(map(x -> x in allowed_part_ids, pids_part)) "Invalid part id in part file!"
+    # The above is replaced by query:
+    #If more parts are defined in the parts file than actually used in the mesh file, don't consider them
+    #If missing parts in the parts file, assign part property 1 to the missing parts
+
+    allowed_sorted = sort(allowed_part_ids)
+    flag_interactive = 999999 in allowed_sorted
+    if flag_interactive
+        deleteat!(allowed_sorted, findfirst(==(999999), allowed_sorted))
+    end
+    set_pids = Set(pids_part)
+    set_allowed = Set(allowed_part_ids)
+    used_part_ids = [
+        pid in set_pids ? pid : 1
+        for pid in allowed_sorted
+    ]
+    #Info Ausgabe:
+    pids_u = unique(pids_part)
+    allowed_u = unique(allowed_part_ids)
+    allowed_in_pids = all(pid -> pid in pids_u, allowed_u)
+    pids_in_allowed = all(pid -> pid in allowed_u, pids_u)
+    if allowed_in_pids && !pids_in_allowed
+        @info "Some parts from the parts description file are not used."
+    elseif !allowed_in_pids
+        @info "Missing part properties in part description file. Properties from part 1 used instead."
+    end
+    #@info "pids_part = $pids_part"
+    #@info "allowed_part_ids = $allowed_part_ids"
+    #@info "used_part_ids = $used_part_ids"
 
     # check validity of part description file (correct number and valid types)
     @assert all([!all(map(!isequal(String(type)), ["base", "inlet", "outlet", "patch"])) for type in unique(partfile["type"])]) "Invalid type entry in part description file!"
 
-
     parts = Dict{Int, Dict}()
     base_parameters = nothing
-    for row in 1:partfile.rows
-        pid = partfile["part_id"][row]
-        # get group for this part
+    if flag_interactive==true
+        push!(used_part_ids, 999999)
+    end
+    #@info "used_part_ids = $used_part_ids"
+    for pid in 1:length(used_part_ids)
+        if used_part_ids[pid]==999999  #interactive inlet
+            row=used_part_ids[1]  #take base properties
+            type = inlet::CELLTYPE
+        else
+             row=used_part_ids[pid]
+             # TODO not happy with this logic here
+            typestring = partfile["type"][row]
+            type = inner::CELLTYPE
+            if typestring == "inlet"
+                type = inlet::CELLTYPE
+            elseif typestring == "outlet"
+                type = outlet::CELLTYPE
+            end
+        end
 
+        # get group for this part
         refdir = [partfile["refdir1"][row] partfile["refdir2"][row] partfile["refdir3"][row]]
 
         # nomalize refdir vector # TODO don't like this kind of calculation here, separate
         refdir = refdir / sqrt(dot(refdir, refdir))
         refdir = Point3{Float64}(refdir[:])
 
-        # TODO not happy with this logic here
-        typestring = partfile["type"][row]
-        type = inner::CELLTYPE
-        if typestring == "inlet"
-            type = inlet::CELLTYPE
-        elseif typestring == "outlet"
-            type = outlet::CELLTYPE
+        if used_part_ids[pid]==999999  #interactive inlet
+            pid_val=999999
+        else
+            pid_val=pid
         end
 
         part_parameters = Dict(
-            KEY_PART_ID => pid,
+            KEY_PART_ID => pid_val,
             KEY_REFERENCE_DIRECTION => refdir,
             KEY_ALPHA => Float64(partfile["alpha"][row]),
             KEY_PERMEABILITY => partfile["permeability"][row],

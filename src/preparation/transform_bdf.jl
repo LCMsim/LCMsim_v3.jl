@@ -119,6 +119,7 @@ function parse_HyperMeshNastran(inputfile::String)
     #     change part_ID to an inlet for all cells which lie inside a sphere with radius
     filename_parts=splitpath(inputfile)
     _psetfile=joinpath( joinpath(filename_parts[1:end-1]) ,"_pset.csv")
+    @info "_psetfile = $_psetfile"
     if isfile(_psetfile)
         #read _psetfile: first line radius, following line inlet points
         lines = readlines(_psetfile);n_lines=length(lines);r_p=parse(Float64,lines[1])
@@ -130,7 +131,8 @@ function parse_HyperMeshNastran(inputfile::String)
             zpos=parse(Float64,str[3])
             inletpos_xyz=push!(inletpos_xyz,[xpos ypos zpos])
         end
-        part_id = 6
+        part_id = 999999
+        @info "If iterative inlets are used the part_id 999999 is reserved and no higher numbers allowed."
         ids = []
         for i_inlet in 1:length(inletpos_xyz)
             #loop over all cells, check if cell center lies inside a sphere with radius r. if so, add cell to set with part_id=6
@@ -155,6 +157,10 @@ function parse_HyperMeshNastran(inputfile::String)
             end     
         end
         ids=unique(ids)
+
+        @info "part_id = $part_id"
+        @info "ids = $ids"
+
         push!(sets, (part_id, ids))
     end
 

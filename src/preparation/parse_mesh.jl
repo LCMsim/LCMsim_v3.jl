@@ -297,7 +297,7 @@ function __parse_abaqus(filename::String)
             zpos=parse(Float64,str[3])
             inletpos_xyz=push!(inletpos_xyz,[xpos ypos zpos])
         end
-        part_id = 6
+        part_id = 999999
         ids = []
         for i_inlet in 1:length(inletpos_xyz)
             #loop over all cells, check if cell center lies inside a sphere with radius r. if so, add cell to set with part_id=6
