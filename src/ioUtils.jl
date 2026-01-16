@@ -509,8 +509,13 @@ function save_case(case::LcmCase, path::String)::Nothing
     ## save the LcmCase object
     #JLD2.save(path * "/data.jld2", "LcmCase", case)
 
-    #COb: path already includes the filename
-    @assert isfile(path) "The given path does not exist." 
+    #COb: it might happen, that it does not exist in the working directory
+    #@assert isfile(path) "The given path does not exist." 
+    if !isfile(path)
+        jldopen(path, "w") do file
+            # nothing inside => empty file
+        end
+    end
     JLD2.save(path, "LcmCase", case)
 end
 
