@@ -16,7 +16,9 @@ include("models/abstract_model.jl")
 include("models/model_1.jl")
 include("models/model_2_3.jl")
 include("models/model_2.jl")
+include("models/model_5.jl")
 include("models/model_3.jl")
+
 
 export create, 
 create_and_solve,
@@ -300,7 +302,9 @@ function continue_and_solve(
         state_old.gamma_out,
         state_old.w,
         state_old.filled,
-        state_old.filled_DM
+        state_old.filled_DM,
+        state_old.rho_air,
+        state_old.rho_oil
     )
 
     #COb: Apply new boundary conditions if changed
@@ -308,11 +312,15 @@ function continue_and_solve(
     state.u[case.mesh.inlet_cell_ids] .= U_A
     state.v[case.mesh.inlet_cell_ids] .= V_A
     state.rho[case.mesh.inlet_cell_ids] .= case.model.rho_a
+    state.rho_air[case.mesh.inlet_cell_ids] .= 0.
+    state.rho_oil[case.mesh.inlet_cell_ids] .= case.model.rho_a
     state.gamma[case.mesh.inlet_cell_ids] .= GAMMA_A
     state.p[case.mesh.outlet_cell_ids] .= case.model.p_init
     state.u[case.mesh.outlet_cell_ids] .= U_INIT
     state.v[case.mesh.outlet_cell_ids] .= V_INIT
     state.rho[case.mesh.outlet_cell_ids] .= case.model.rho_init
+    state.rho_air[case.mesh.outlet_cell_ids] .= case.model.rho_init
+    state.rho_oil[case.mesh.outlet_cell_ids] .= 0.
     state.gamma[case.mesh.outlet_cell_ids] .= GAMMA_INIT
     state.p_DM[case.mesh.inlet_cell_ids] .= case.model.p_a
     state.u_DM[case.mesh.inlet_cell_ids] .= U_A
@@ -933,6 +941,183 @@ function aggregate_neighour_flux_DM(
 end
 
 """
+    aggregate_neighour_flux_rho_air_and_oil(
+        cell::LcmCell,
+        scaled_properties::ScaledProperties,
+        mesh::LcmMesh,
+        ∇p::Point2{Float64},
+        rho_old::Vector{Float64},
+        u_old::Vector{Float64},
+        v_old::Vector{Float64},
+        gamma_old::Vector{Float64},
+        rho_air_old::Vector{Float64},
+        rho_oil_old::Vector{Float64}
+    )::Tuple{Float64, Float64}
+
+    Aggregates the neighbour flux numerically for the given cell and scaled properties.
+    Returns a tuple of the aggregated fluxes:
+        F_rho_air_num,
+        F_rho_oil_num
+"""
+function aggregate_neighour_flux_rho_air_and_oil(
+    model::AbstractModel,
+    cell::LcmCell,
+    scaled_properties::ScaledProperties,
+    mesh::LcmMesh,
+    ∇p::Point2{Float64},
+    rho_old::Vector{Float64},
+    u_old::Vector{Float64},
+    v_old::Vector{Float64},
+    gamma_old::Vector{Float64},
+    rho_air_old::Vector{Float64},
+    rho_oil_old::Vector{Float64}
+)::Tuple{Float64, Float64} 
+
+    # corresponds to [F_rho_air_num, F_rho_oil_num]
+    numerical_flux = zeros(Float64, 2)
+
+    for (i_neighbour, neighbour) in enumerate(cell.neighbours)
+        # transform old u, v of neighbour into this cell's coordinates
+        uvec = neighbour.transformation * [u_old[neighbour.id]; v_old[neighbour.id]]
+        u_A = uvec[1]
+        v_A = uvec[2]
+    
+        vars_P = [
+            rho_old[cell.id], 
+            u_old[cell.id], 
+            v_old[cell.id], 
+            gamma_old[cell.id],
+            rho_air_old[cell.id], 
+            rho_oil_old[cell.id]
+        ]
+        
+        vars_A = [
+            rho_old[neighbour.id], 
+            u_A,
+            v_A, 
+            gamma_old[neighbour.id],
+            rho_air_old[neighbour.id], 
+            rho_oil_old[neighbour.id]
+        ]
+
+        # scaled face area of i-th neighbour
+        A = scaled_properties.face[i_neighbour]
+
+        neighbour_cell = mesh.cells[neighbour.id]
+        neighbour_type = neighbour_cell.type
+        if neighbour_type == inner::CELLTYPE || neighbour_type == wall::CELLTYPE
+
+            numerical_flux .+= numerical_flux_function_rho_air_and_oil(1, vars_P, vars_A, neighbour.face_normal, A)
+           
+        elseif neighbour_type == inlet::CELLTYPE || neighbour_type == outlet::CELLTYPE
+
+            A = A * cell.thickness / (0.5 * (cell.thickness + neighbour_cell.thickness)) # TODO thickness Factor?
+
+            if neighbour_type == outlet::CELLTYPE
+
+                n_dot_u = dot(neighbour.face_normal, [u_old[cell.id]; v_old[cell.id]])
+
+            elseif neighbour_type == inlet::CELLTYPE
+
+                viscosity_inlet_cell=model.mu_resin  
+                n_dot_u = min(
+                    0, 
+                    -1 / viscosity_inlet_cell * dot(
+                        [scaled_properties.permeability 0; 0 scaled_properties.permeability * cell.alpha] * ∇p, # <=> [k1; k2] .* ∇p
+                        neighbour.face_normal
+                    )
+
+                #n_dot_u = min(
+                #    0, 
+                #    -1 / scaled_properties.viscosity * dot(
+                #        [scaled_properties.permeability 0; 0 scaled_properties.permeability * cell.alpha] * ∇p, # <=> [k1; k2] .* ∇p
+                #        neighbour.face_normal
+                #    )
+
+                )  #inflow according to Darcy's law and no backflow possible
+            end
+            numerical_flux .+= numerical_flux_function_rho_air_and_oil_boundary(1, vars_P, vars_A, A, n_dot_u)
+
+        end
+    end
+
+    F_rho_air_num = numerical_flux[1]
+    F_rho_oil_num = numerical_flux[2]
+
+    return F_rho_air_num, F_rho_oil_num
+end
+
+function numerical_flux_function_rho_air_and_oil(i_method, vars_P, vars_A, face_normal, A)::Vector{Float64}
+    if i_method == 1
+        #first order upwinding
+        rho_P = vars_P[1]
+        u_P = vars_P[2]
+        v_P = vars_P[3]
+        gamma_P = vars_P[4]
+        rho_air_P = vars_P[5]
+        rho_oil_P = vars_P[6]
+
+        rho_A = vars_A[1]
+        u_A = vars_A[2]
+        v_A = vars_A[3]
+        gamma_A = vars_A[4]
+        rho_air_A = vars_A[5]
+        rho_oil_A = vars_A[6]
+
+        n_dot_rhou1 = dot(face_normal, 0.5 * (rho_air_P + rho_air_A) * [0.5 * (u_P + u_A); 0.5 * (v_P + v_A)])
+        n_dot_rhou = n_dot_rhou1
+        phi = 1
+        F_rho_air_num_add = n_dot_rhou * phi * A
+        if n_dot_rhou1 >= 0
+            phi = u_P
+        else
+            phi = u_A
+        end
+        n_dot_rhou1 = dot(face_normal, 0.5 * (rho_oil_P + rho_oil_A) * [0.5 * (u_P + u_A); 0.5 * (v_P + v_A)])
+        n_dot_rhou = n_dot_rhou1
+        phi = 1
+        F_rho_oil_num_add = n_dot_rhou * phi * A
+        if n_dot_rhou1 >= 0
+            phi = u_P
+        else
+            phi = u_A
+        end
+
+    end
+    return [F_rho_air_num_add, F_rho_oil_num_add]
+end
+
+function numerical_flux_function_rho_air_and_oil_boundary(i_method, vars_P, vars_A, A, n_dot_u)::Vector{Float64}
+    if i_method == 1
+        #first order upwinding
+        rho_P = vars_P[1]
+        u_P = vars_P[2]
+        v_P = vars_P[3]
+        gamma_P = vars_P[4]
+        rho_air_P = vars_P[5]
+        rho_oil_P = vars_P[6]
+
+        rho_A = vars_A[1]
+        u_A = vars_A[2]
+        v_A = vars_A[3]
+        gamma_A = vars_A[4]
+        rho_air_A = vars_A[5]
+        rho_oil_A = vars_A[6]
+
+        n_dot_rhou = n_dot_u * 0.5 * (rho_air_A + rho_air_P)
+        phi = 1
+        F_rho_air_num_add = n_dot_rhou * phi * A
+
+        n_dot_rhou = n_dot_u * 0.5 * (rho_oil_A + rho_oil_P)
+        phi = 1
+        F_rho_oil_num_add = n_dot_rhou * phi * A
+        
+    end
+    return [F_rho_air_num_add, F_rho_oil_num_add]
+end
+
+
+"""
     adaptive_timestep(
         model::AbstractModel,
         cells::Vector{LcmCell},
@@ -984,6 +1169,7 @@ function adaptive_timestep(
     # removed sqrt from loop, since it should changed the 
     # index of the minimum and only apply it afterwards
     Δt = (1 - α) * Δt + α * model.betat2 * sqrt(min_val)
+
     return Δt
 end
 
@@ -1042,6 +1228,8 @@ function solve(
     w_old = deepcopy(old_state.w)
     filled_old = deepcopy(old_state.filled)
     filled_DM_old = deepcopy(old_state.filled_DM)
+    rho_air_old = deepcopy(old_state.rho_air)
+    rho_oil_old = deepcopy(old_state.rho_oil)
 
     # vectors for new state; already here the boundary conditions are set because not changed inside t loop
     p_new = deepcopy(p_old)
@@ -1060,23 +1248,26 @@ function solve(
     w_new = deepcopy(w_old)
     filled_new = deepcopy(filled_old)
     filled_DM_new = deepcopy(filled_DM_old)
+    rho_air_new = deepcopy(rho_air_old)
+    rho_oil_new = deepcopy(rho_oil_old)
 
     if verbosity == verbose::Verbosity
         @info "Start solving at t = $t."
         progress = ProgressMeter.Progress(100; desc="Solving", showspeed=true)
     end
 
+i_out=1
+    
     # time evolution
     while t <= t_next
-        
         # iterate over cells, that are neither an inlet nor an outlet
         for cell in mesh.cells[mesh.textile_cell_ids]
-
             # calculate factors for this cell and scale properties (only applies to model 3)
             scaled_properties = scale_properties(
                 model, 
                 cell, 
                 max(min(p_old[cell.id],model.p_a),model.p_init),  #p_old[cell.id], 
+                rho_old[cell.id],
                 cellporositytimesporosityfactor_old[cell.id], 
                 viscosity[cell.id],
                 iter
@@ -1101,21 +1292,22 @@ function solve(
                 gamma_old
             )
 
-            # calculate pressure gradient
-            ∇p_DM = numerical_gradient(3, cell, p_DM_old)  #numerical_gradient(2, cell, p_DM_old)
+            if cell.thickness_DM>0.
+                # calculate pressure gradient
+                ∇p_DM = numerical_gradient(3, cell, p_DM_old)  #numerical_gradient(2, cell, p_DM_old)
 
-            # aggregate neighbour flux numerically
-            F_rho_DM_num, F_u_DM_num, F_v_DM_num, F_gamma_DM_num, F_gamma_DM_num1 = aggregate_neighour_flux_DM(
-                cell,
-                scaled_properties,
-                mesh,
-                ∇p_DM,
-                rho_DM_old,
-                u_DM_old,
-                v_DM_old,
-                gamma_DM_old
-            )
-
+                # aggregate neighbour flux numerically
+                F_rho_DM_num, F_u_DM_num, F_v_DM_num, F_gamma_DM_num, F_gamma_DM_num1 = aggregate_neighour_flux_DM(
+                    cell,
+                    scaled_properties,
+                    mesh,
+                    ∇p_DM,
+                    rho_DM_old,
+                    u_DM_old,
+                    v_DM_old,
+                    gamma_DM_old
+                )
+            end
 
             # aggregate thickness flux numerically
             if cell.thickness_DM>0.
@@ -1148,7 +1340,45 @@ function solve(
             else
                 w_new[cell.id]=0.
             end
-            
+        
+            modeltype=model_5::ModelType
+            if modeltype==model_5
+                # aggregate neighbour flux for rho_air and rho_oil numerically
+                F_rho_air_num, F_rho_oil_num = aggregate_neighour_flux_rho_air_and_oil(
+                    model,
+                    cell,
+                    scaled_properties,
+                    mesh,
+                    ∇p,
+                    rho_old,
+                    u_old,
+                    v_old,
+                    gamma_old,
+                    rho_air_old,
+                    rho_oil_old
+                )
+                rho_air_new[cell.id] = update_rho_air(
+                    model,
+                    Δt,
+                    scaled_properties,
+                    rho_air_old[cell.id],
+                    F_rho_air_num,
+                    cellporositytimesporosityfactor_old[cell.id]
+                )
+                rho_oil_new[cell.id] = update_rho_oil(
+                    model,
+                    Δt,
+                    scaled_properties,
+                    rho_oil_old[cell.id],
+                    F_rho_oil_num,
+                    cellporositytimesporosityfactor_old[cell.id]
+                )
+                aux=rho_air_new[cell.id]+rho_oil_new[cell.id]
+            else
+                rho_air_new[cell.id] = 0.
+                rho_oil_old[cell.id] = 0.
+                aux=0.
+            end
 
             # calculate new state
             rho_new[cell.id] = update_rho(
@@ -1157,7 +1387,8 @@ function solve(
                 scaled_properties,
                 rho_old[cell.id],
                 F_rho_num,
-                cellporositytimesporosityfactor_old[cell.id]
+                cellporositytimesporosityfactor_old[cell.id],
+                aux
             )
 
             cellporositytimesporosityfactor_old[cell.id] = update_porosity_times_porosity(
@@ -1187,12 +1418,21 @@ function solve(
                 v_old[cell.id]
             )
 
+            #Values required for Model_5
+            E_val=2e9/1000  #artificially weakend to get larger time step; C_air approx. 1e5 GPa for isothermal conditions 
+            kappa_air_val=model.p_init/model.rho_init
+            m_0_oil_val=model.rho_0_oil*cell.porosity*cell.volume
+            m_air_val=max(rho_air_new[cell.id],1e-6)*cell.porosity*cell.volume
+            m_oil_val=max(rho_oil_new[cell.id],1e-6)*cell.porosity*cell.volume
+            aux_vec=[E_val,kappa_air_val,m_0_oil_val,m_air_val,m_oil_val]
+
             p_new[cell.id] = update_p(
                 model,
                 mesh, 
                 rho_new[cell.id],
                 filled_new[cell.id],
-                scaled_properties
+                scaled_properties,
+                aux_vec
             )
 
             gamma_new[cell.id] = update_gamma(
@@ -1213,8 +1453,6 @@ function solve(
 
             #filled_new[cell.id]=max(filled_new[cell.id],gamma_new[cell.id])
             filled_new[cell.id]=max(filled_DM_new[cell.id],rho_DM_new[cell.id]/model.rho_0_oil)
-
-
 
             if cell.thickness_DM>0.
                 # calculate new state for DM
@@ -1260,12 +1498,14 @@ function solve(
                     cell.permeability_DM,
                     scaled_properties.viscosity
                 )
+                aux_vec=[0.]
                 p_DM_new[cell.id] = update_p(
                     model,
                     mesh, 
                     rho_DM_new[cell.id],
                     filled_DM_new[cell.id],
-                    scaled_properties
+                    scaled_properties,
+                    aux_vec
                 )
                 gamma_DM_new[cell.id] = update_gamma_DM(
                     model,
@@ -1303,6 +1543,8 @@ function solve(
             rho_old[cell.id] = rho_new[cell.id] + 0.0
             p_old[cell.id] = p_new[cell.id] + 0.0
             gamma_old[cell.id] = gamma_new[cell.id] + 0.0
+            rho_air_old[cell.id] = rho_air_new[cell.id] + 0.0
+            rho_oil_old[cell.id] = rho_oil_new[cell.id] + 0.0
 
             u_DM_old[cell.id] = u_DM_new[cell.id] + 0.0
             v_DM_old[cell.id] = v_DM_new[cell.id] + 0.0
@@ -1335,8 +1577,8 @@ function solve(
                 @error "Δt is NaN or Inf. Stopping simulation."
                 break
             end
-        end
-        
+        end    
+
         iter = iter + 1
         t = t + Δt
 
@@ -1374,7 +1616,9 @@ function solve(
         gamma_out_new,
         w_new,
         filled_new,
-        filled_DM_new
+        filled_DM_new,
+        rho_air_new,
+        rho_oil_new
     )
 end
 end # module LcmSimCore

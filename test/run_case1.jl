@@ -3,9 +3,9 @@ include("../src/LCMsim_v3.jl")
 mypath=pwd()
 savepath = joinpath(mypath,"test")
 
-i_case=22 #23  #31
+i_case=101  #101  #22  #21  #1
 if i_case==21  
-    #VARI case 1: Vlidation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
+    #VARI case 1: Validation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
     #             Simulation of the reinforcement compaction and resin flow during the complete resin infusion process    
     meshfile = joinpath(mypath,"test","mesh_21.dat")
     partfile = joinpath(mypath,"test","part_description_21.csv")
@@ -43,6 +43,13 @@ elseif i_case==1
     simfile = joinpath(mypath,"test","simulation_params_1.csv")
     i_model=2  #3  #  
     t_max = 200.
+elseif i_case==101  
+    #Radial test case 1 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
+    meshfile = joinpath(mypath,"test","mesh_21.dat")
+    partfile = joinpath(mypath,"test","part_description_101.csv")
+    simfile = joinpath(mypath,"test","simulation_params_101.csv")
+    i_model=5  #2  #
+    t_max = 16.  #200.  #300.  #
 elseif i_case==2
     #Radial test case 2 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
     meshfile = joinpath(mypath,"test","mesh_2.dat")
@@ -93,6 +100,8 @@ if i_model == 1
     modeltype = LCMsim_v3.model_1
 elseif i_model == 2         
     modeltype = LCMsim_v3.model_2
+elseif i_model == 5
+    modeltype = LCMsim_v3.model_5   
 else
     modeltype = LCMsim_v3.model_3
 end  

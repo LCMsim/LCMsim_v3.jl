@@ -42,11 +42,13 @@ Enumeration representing different types of models.
 - `model_1`: Represents model 1.
 - `model_2`: Represents model 2.
 - `model_3`: Represents model 3.
+- `model_5`: Represents model 5.
 """
 @enum ModelType begin
     model_1 = 1
     model_2 = 2
     model_3 = 3
+    model_5 = 5
 end
 
 """
@@ -426,6 +428,42 @@ struct Model_3 <: Model_2_3
 end
 
 """
+    struct Model_5 <: Model_2_3
+
+The `Model_5` struct represents a specific model that extends `Model_2_3`.
+
+Fields:
+- `p_a::Float64`: Pressure of air
+- `p_init::Float64`: Initial pressure
+- `p_ref::Float64`: Reference pressure
+- `rho_a::Float64`: Density of air
+- `rho_init::Float64`: Initial density
+- `mu_resin::Float64`: Resin viscosity
+- `betat2::Float64`: Beta times squared
+- `rho_0_air::Float64`: Reference density of air
+- `rho_0_oil::Float64`: Reference density of oil
+- `rho_ref::Float64`: Reference density
+- `betat2_fac::Float64`: Beta times squared factor
+- `exp_val::Float64`: Exponential value
+
+"""
+struct Model_5 <: Model_2_3
+    p_a::Float64
+    p_init::Float64
+    p_ref::Float64
+    rho_a::Float64
+    rho_init::Float64
+    mu_resin::Float64
+    betat2::Float64
+    rho_0_air::Float64
+    rho_0_oil::Float64
+    rho_ref::Float64
+    betat2_fac::Float64
+    exp_val::Float64
+end
+
+
+"""
     struct State
 
 The `State` struct represents the state of a simulation at a given time step.
@@ -452,7 +490,8 @@ The `State` struct represents the state of a simulation at a given time step.
 - `w::Vector{Float64}`: Velocity in the z-direction between distribution medium and fibrous preform
 - `filled::Vector{Float64}`: Saves the maximum filling state
 - `filled_DM::Vector{Float64}`: Saves the maximum filling state in DM
-
+- `rho_air::Vector{Float64}`: Partial air density values
+- `rho_oil::Vector{Float64}`: Partial oil density values
 """
 struct State
     t::Float64
@@ -476,6 +515,8 @@ struct State
     w::Vector{Float64}
     filled::Vector{Float64}
     filled_DM::Vector{Float64}
+    rho_air::Vector{Float64}
+    rho_oil::Vector{Float64}
 end
 
 """

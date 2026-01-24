@@ -267,6 +267,36 @@ function load_model(filename::String)::AbstractModel
                 betat2_fac,
                 exp_val
             )
+
+        elseif type == 5
+            group = f["model"]
+            rho_0_air = read_attribute(group, "rho_0_air")
+            rho_0_oil = read_attribute(group, "rho_0_oil")
+            betat2_fac = read_attribute(group, "betat2_fac")
+            betat2 = read_attribute(group, "betat2")
+            exp_val = read_attribute(group, "exp_val")
+            p_a = read_attribute(group, "p_a")
+            p_init = read_attribute(group, "p_init")
+            p_ref = read_attribute(group, "p_ref")
+            rho_a = read_attribute(group, "rho_a")
+            rho_init = read_attribute(group, "rho_init")
+            rho_ref = read_attribute(group, "rho_ref")
+            mu_resin = read_attribute(group, "mu_resin")
+
+            model = Model_5(
+                p_a,
+                p_init,
+                p_ref,
+                rho_a,
+                rho_init,
+                mu_resin,
+                betat2,
+                rho_0_air,
+                rho_0_oil,
+                rho_ref,
+                betat2_fac,
+                exp_val
+            )
         end
     end
 
@@ -345,6 +375,29 @@ function save_model(model::Model_3, filename::String)::Nothing
         write_attribute(group, "mu_resin", model.mu_resin)
     end
 end
+"""
+    save_model(model::Model_5, filename::String)::Nothing
+
+    Saves a Model_5 object to a hdf5 file.
+"""
+function save_model(model::Model_5, filename::String)::Nothing
+    h5open(filename, "r+") do f
+        write_attribute(f, "model_type", 5) 
+        group = create_group(f, "model")
+        write_attribute(group, "rho_0_air", model.rho_0_air)
+        write_attribute(group, "rho_0_oil", model.rho_0_oil)
+        write_attribute(group, "betat2_fac", model.betat2_fac)
+        write_attribute(group, "betat2", model.betat2)
+        write_attribute(group, "exp_val", model.exp_val)
+        write_attribute(group, "p_a", model.p_a)
+        write_attribute(group, "p_init", model.p_init)
+        write_attribute(group, "p_ref", model.p_ref)
+        write_attribute(group, "rho_a", model.rho_a)
+        write_attribute(group, "rho_init", model.rho_init)
+        write_attribute(group, "rho_ref", model.rho_ref)
+        write_attribute(group, "mu_resin", model.mu_resin)
+    end
+end
 
 """
     save_state(
@@ -393,7 +446,9 @@ function save_state(
             (HDF_GAMMA_OUT, state.gamma_out),
             (HDF_W, state.w),
             (HDF_FILLED, state.filled),
-            (HDF_FILLED_DM, state.filled_DM)
+            (HDF_FILLED_DM, state.filled_DM),
+            (HDF_RHO_AIR, state.rho_air),
+            (HDF_RHO_OIL, state.rho_oil)
         ]
     )
 end
@@ -454,7 +509,9 @@ function load_states(filename::String)::Vector{State}
                     read_dataset(g, "u"),
                     read_dataset(g, "v"),
                     read_dataset(g, "viscosity"),
-                    read_dataset(g, "cellporositytimesporosityfactor")
+                    read_dataset(g, "cellporositytimesporosityfactor"),
+                    read_dataset(g, "rho_air"),
+                    read_dataset(g, "rho_oil")
                 )
                 push!(states, state)
             end

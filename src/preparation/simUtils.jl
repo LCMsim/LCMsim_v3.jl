@@ -173,6 +173,21 @@ function create_SimParameters(
                 betat2_fac,
                 exp_val
             )
+        elseif i_model == model_5::ModelType
+            return Model_5(
+                p_a,
+                p_init,
+                p_ref,
+                rho_a,
+                rho_init,
+                mu_resin,
+                betat2,
+                rho_0_air,
+                rho_0_oil,
+                rho_ref,
+                betat2_fac,
+                exp_val
+            )
         else
             return Model_3(
                 p_a,
@@ -216,7 +231,7 @@ function calculate_initial_timestep(
 
     max_velocity *= (model.p_a - model.p_init) / min_area
         
-    Δt = sqrt(min_area) / max_velocity
+    Δt = sqrt(min_area) / max_velocity 
 
     return Δt
 end
@@ -246,6 +261,8 @@ function create_initial_state(
     w = zeros(Float64, mesh.N)  #is only used as output
     filled = zeros(Float64, mesh.N)  #is only used as output
     filled_DM = zeros(Float64, mesh.N)  #is only used as output
+    rho_air = zeros(Float64, mesh.N) .+ model.rho_init
+    rho_oil = zeros(Float64, mesh.N) .+ 0.
 
     # set boundary conditions of inlet cells
     p[inlet_cells] .= model.p_a
@@ -258,6 +275,8 @@ function create_initial_state(
     u_DM[inlet_cells] .= U_A
     v_DM[inlet_cells] .= V_A
     gamma_DM[inlet_cells] .= GAMMA_A
+    rho_air[inlet_cells] .= 0.
+    rho_oil[inlet_cells] .= model.rho_a
     
 
     cellporositytimesporosityfactor = Vector{Float64}(undef, mesh.N)
@@ -291,6 +310,8 @@ function create_initial_state(
         gamma_out,
         w,
         filled,
-        filled_DM
+        filled_DM,
+        rho_air,
+        rho_oil
     )
 end
