@@ -3,7 +3,7 @@ include("../src/LCMsim_v3.jl")
 mypath=pwd()
 savepath = joinpath(mypath,"test")
 
-i_case=101  #101  #22  #21  #1
+i_case=108  #101  #22  #21  #1
 if i_case==21  
     #VARI case 1: Validation case without DM from Q. Govignon, S. Bickerton, P.A. Kelly, 
     #             Simulation of the reinforcement compaction and resin flow during the complete resin infusion process    
@@ -44,12 +44,25 @@ elseif i_case==1
     i_model=2  #3  #  
     t_max = 200.
 elseif i_case==101  
-    #Radial test case 1 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
-    meshfile = joinpath(mypath,"test","mesh_21.dat")
+    #Linear RTM flow from FPCM17
+    meshfile = joinpath(mypath,"test","mesh_101.dat")
     partfile = joinpath(mypath,"test","part_description_101.csv")
     simfile = joinpath(mypath,"test","simulation_params_101.csv")
     i_model=5  #2  #
-    t_max = 16.  #200.  #300.  #
+    t_max = 200.  #200.  #300.  #
+elseif i_case==102
+    #Radial test case 1 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
+    meshfile = joinpath(mypath,"test","mesh_102a.dat")
+    partfile = joinpath(mypath,"test","part_description_102.csv")
+    simfile = joinpath(mypath,"test","simulation_params_102.csv")
+    i_model=5  #2  #
+    t_max = 200.  #200.  #300.  #
+elseif i_case==108   #AMPCS case 2 from https://www.tandfonline.com/doi/full/10.1080/20550340.2023.2282310, Validation was performed with exp_val=4, now exp_val=25 is default, resulting is small discrepacies
+    meshfile = joinpath(mypath,"test","mesh_108a.dat")
+    partfile = joinpath(mypath,"test","part_description_108.csv")
+    simfile = joinpath(mypath,"test","simulation_params_108.csv")
+    i_model=5  #2  #
+    t_max = 100.  #80.  #
 elseif i_case==2
     #Radial test case 2 from https://obertscheiderfhwn.github.io/RTMsim/build/tutorials/
     meshfile = joinpath(mypath,"test","mesh_2.dat")
