@@ -588,7 +588,7 @@ end
 # INTERNAL FUNCTIONS
 ##################################################################################################
 
-function numerical_gradient(i_method::Int, cell::LcmCell, p_old::Vector{Float64})::Point2{Float64}
+function numerical_gradient(i_method::Int, cell::LcmCell, p_old::Vector{Float64}, gamma_old::Vector{Float64})::Point2{Float64}
     if i_method == 1
         #least square solution to determine gradient
         bvec = Vector{Float64}(undef, cell.num_neighbours)
@@ -627,7 +627,7 @@ function numerical_gradient(i_method::Int, cell::LcmCell, p_old::Vector{Float64}
         #least square solution to determine gradient - runtime optimized
         bvec = Vector{Float64}(undef, cell.num_neighbours)
         Amat = Array{Float64}(undef, cell.num_neighbours, 2)
-        for (i_neighbour, neighbour) in enumerate(cell.neighbours)
+        for (i_neighbour, neighbour) in enumerate(cell.neighbours)            
             i_P = cell.id
             i_A = neighbour.id
             Amat[i_neighbour, :] = neighbour.toCenter
@@ -1278,7 +1278,7 @@ i_out=1
             porosity_new[cell.id]=scaled_properties.realporosity
 
             # calculate pressure gradient
-            ∇p = numerical_gradient(3, cell, p_old)  #numerical_gradient(2, cell, p_old)
+            ∇p = numerical_gradient(3, cell, p_old,gamma_old)  #numerical_gradient(2, cell, p_old)
 
             # aggregate neighbour flux numerically
             F_rho_num, F_u_num, F_v_num, F_gamma_num, F_gamma_num1 = aggregate_neighour_flux(
@@ -1294,7 +1294,7 @@ i_out=1
 
             if cell.thickness_DM>0.
                 # calculate pressure gradient
-                ∇p_DM = numerical_gradient(3, cell, p_DM_old)  #numerical_gradient(2, cell, p_DM_old)
+                ∇p_DM = numerical_gradient(3, cell, p_DM_old,gamma_DM_old)  #numerical_gradient(2, cell, p_DM_old)
 
                 # aggregate neighbour flux numerically
                 F_rho_DM_num, F_u_DM_num, F_v_DM_num, F_gamma_DM_num, F_gamma_DM_num1 = aggregate_neighour_flux_DM(
@@ -1419,7 +1419,7 @@ i_out=1
             )
 
             #Values required for Model_5
-            E_val=2e9/1000  #artificially weakend to get larger time step; C_air approx. 1e5 GPa for isothermal conditions 
+            E_val=2e9/1000  #2e9/1000  #artificially weakend to get larger time step; C_air approx. 1e5 GPa for isothermal conditions 
             kappa_air_val=model.p_init/model.rho_init
             m_0_oil_val=model.rho_0_oil*cell.porosity*cell.volume
             m_air_val=max(rho_air_new[cell.id],1e-6)*cell.porosity*cell.volume

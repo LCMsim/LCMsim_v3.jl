@@ -55,7 +55,8 @@ function parse_HyperMeshNastran(inputfile::String)
                 ids = []
            
                 for l in temp_set
-                    ids_string = match(Regex("([0-9]+,)+[0-9]+"), l).match
+                    #ids_string = match(Regex("([0-9]+,)+[0-9]+"), l).match  #throws error for line "    123"
+                    ids_string = match(Regex("[0-9]+(?:,[0-9]+)*"), l).match
                     append!(ids, split(ids_string, ","))
                 end
            
